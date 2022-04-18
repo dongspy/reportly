@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- Include javascript files -->
+
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/default_multiqc.css" rel="stylesheet">
+    <link href="assets/css/jquery.toast.css" rel="stylesheet">
+
+
+    <!-- Include javascript files -->
+<script type="text/javascript" src='assets/js/packages/jquery-3.1.1.min.js'></script>
+<script type="text/javascript" src='assets/js/packages/jquery-ui.min.js'></script>
+<script type="text/javascript" src='assets/js/packages/bootstrap.min.js'></script>
+<script type="text/javascript" src='assets/js/packages/highcharts.js'></script>
+<script type="text/javascript" src='assets/js/packages/highcharts.heatmap.js'></script>
+<script type="text/javascript" src='assets/js/packages/highcharts.exporting.js'></script>
+<script type="text/javascript" src='assets/js/packages/highcharts.offline-exporting.js'></script>
+<script type="text/javascript" src='assets/js/packages/highcharts.export-csv.js'></script>
+<script type="text/javascript" src='assets/js/packages/jquery.tablesorter.min.js'></script>
+<script type="text/javascript" src='assets/js/packages/clipboard.min.js'></script>
+<script type="text/javascript" src='assets/js/packages/FileSaver.min.js'></script>
+<script type="text/javascript" src='assets/js/packages/lz-string.min.js'></script>
+<script type="text/javascript" src='assets/js/packages/jquery.toast.min.js'></script>
+<script type="text/javascript" src='assets/js/multiqc.js'></script>
+<script type="text/javascript" src='assets/js/multiqc_tables.js'></script>
+<script type="text/javascript" src='assets/js/multiqc_plotting.js'></script>
+<script type="text/javascript" src='assets/js/multiqc_mpl.js'></script>
+<script type="text/javascript" src='assets/js/multiqc_toolbox.js'></script>
+
+</head>
+<body>
+
+    <!-- nav -->
+    <div class="side-nav-wrapper">
+        <div class="side-nav">
+          <h1>
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".mqc-nav, .mqc-toolbox">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a href="#">
+              <img src="data:image/png;base64,{{ include_file('assets/img/MultiQC_logo.png', b64=True) }}" title="MultiQC">
+              <br class="hidden-xs">
+              <small class="hidden-xs">v{{ config.version }}</small>
+            </a>
+          </h1>
+          {% if config.title is not none %}
+            <h1 class="side-nav-title"><a href="#">{{ config.title }}</a></h1>
+          {% endif %}
+          <p class="mqc_loading_warning">Loading report..</p>
+          <ul class="mqc-nav collapse navbar-collapse">
+            {% if not config.skip_generalstats %}
+            <li>
+              <a href="#general_stats" class="nav-l1">General Stats</a>
+            </li>
+            {% endif -%}
+            {% for m in report.modules_output %}
+            {% if m.sections | length > 0 %}
+            <li>
+              <a href="#{{ m.anchor }}" class="nav-l1">{{ m.name }}</a>
+              <ul>
+              {% if m.sections | length > 1 -%}
+                {% for s in m.sections -%}
+                  {% if s['name'] is not none and s['name'] | length > 0 %}
+                  <li>
+                    <a href="#{{ s['anchor'] }}" class="nav-l2">{{ s['name']|striptags }}</a>
+                  </li>
+                  {% endif %}
+                {%- endfor %}
+              {% endif %}
+              </ul>
+            </li>
+            {% endif %}
+            {% endfor %}
+          </ul>
+        </div>
+        <!-- Nav Width Toggle Button -->
+        <div id="side-nav-handle"><span class="glyphicon glyphicon-triangle-left" aria-hidden="true"></span></div>
+      </div>
+
+   <!-- toolbox    -->
+   <div class="mqc-toolbox collapse">
+
+    <!-- Toolbar show/hide buttons -->
+    <div class="mqc-toolbox-buttons hidden-xs">
+      <a class="mqc-toolbox-label" href="#mqc_cols" title="Open Toolbox">Toolbox</a>
+      <ul>
+        <li><a href="#mqc_cols" title="Highlight" data-placement="left" data-toggle="tooltip"><span class="glyphicon glyphicon-pushpin"></span></a></li>
+        <li><a href="#mqc_renamesamples" title="Rename" data-placement="left" data-toggle="tooltip"><span class="glyphicon glyphicon-font"></span></a></li>
+        <li><a href="#mqc_hidesamples" title="Hide" data-placement="left" data-toggle="tooltip"><span class="glyphicon glyphicon-eye-close"></span></a></li>
+        <li><a href="#mqc_exportplots" title="Export" data-placement="left" data-toggle="tooltip"><span class="glyphicon glyphicon-download-alt"></span></a></li>
+        <li><a href="#mqc_saveconfig" title="Save" data-placement="left" data-toggle="tooltip"><span class="glyphicon glyphicon-floppy-disk"></span></a></li>
+        <li><a href="#mqc_citations" title="Citations" data-placement="left" data-toggle="tooltip"><span class="glyphicon glyphicon-education"></span></a></li>
+        <li><a href="#mqc_about" title="About" data-placement="left" data-toggle="tooltip"><span class="glyphicon glyphicon-question-sign"></span></a></li>
+      </ul>
+    </div>
+
+    <div class="mqc-toolbox-wrapper">
+      <!-- Header - always visible -->
+      <div class="mqc-toolbox-header hidden-xs">
+        <h3>MultiQC Toolbox</h3>
+      </div>
+
+      <!-- Highlighting -->
+      <div id="mqc_cols" class="mqc_filter_section">
+        <h4>
+          <button id="mqc_cols_apply" class="btn btn-xs btn-default pull-right" disabled>Apply</button>
+          Highlight Samples
+        </h4>
+        {% if report.num_mpl_plots > 0 %}
+        <p>
+          <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+          This report has flat image plots that won't be highlighted.<br/>
+          See the <a href="http://multiqc.info/docs/#flat--interactive-plots" target="_blank">documentation</a>
+          for help.
+        </p>
+        {% endif %}
+        <form class="form-inline" id="mqc_color_form">
+          <input id="mqc_colour_filter" type="text" placeholder="Custom Pattern" class="form-control input-sm">
+          <input id="mqc_colour_filter_color" type="color" value="#e41a1c" class="form-control input-sm">
+          <button type="submit" id="mqc_colour_filter_update" class="btn btn-default btn-sm">+</button>
+        </form>
+        <p class="mqc_regex_mode_p">
+          <span class="mqc_switch_wrapper mqc_regex_mode" data-target="mqc_cols">Regex mode <span class="mqc_switch re_mode off">off</span></span>
+          <button class="btn btn-sm btn-link" data-toggle="modal" data-target="#regex_help_modal">help</button>
+          <button class="btn btn-default btn-xs mqc_toolbox_clear"><span class="glyphicon glyphicon-trash"></span> Clear</button>
+        </p>
+        <ul id="mqc_col_filters" class="mqc_filters"></ul>
+      </div>
+
+      <!-- Renaming -->
+      <div id="mqc_renamesamples" class="mqc_filter_section">
+        <h4>
+          <button id="mqc_rename_apply" class="btn btn-xs btn-default pull-right" disabled>Apply</button>
+          Rename Samples
+        </h4>
+        {% if report.num_mpl_plots > 0 %}
+        <p>
+          <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+          This report has flat image plots that won't be renamed.<br/>
+          See the <a href="http://multiqc.info/docs/#flat--interactive-plots" target="_blank">documentation</a>
+          for help.
+        </p>
+        {% endif %}
+        <form class="form-inline" id="mqc_renamesamples_form">
+          <input id="mqc_renamesamples_from" type="text" placeholder="From" class="form-control input-sm">
+          <input id="mqc_renamesamples_to" type="text" placeholder="To" class="form-control input-sm">
+          <button type="submit" id="mqc_renamesamples_filter_update" class="btn btn-default btn-sm">+</button>
+        </form>
+        <p><a data-toggle="collapse" href="#mqc_renamesamples_bulk_collapse">Click here for bulk input.</a></p>
+        <div class="collapse" id="mqc_renamesamples_bulk_collapse">
+          <p>Paste two columns of a tab-delimited table here (eg. from Excel).</p>
+          <p>First column should be the old name, second column the new name.</p>
+          <form id="mqc_renamesamples_bulk_form">
+            <textarea class="form-control" rows="5"></textarea>
+            <button type="submit" id="mqc_renamesamples_bulk_update" class="btn btn-default btn-sm">Add</button>
+          </form>
+        </div>
+        <p class="mqc_regex_mode_p">
+          <span class="mqc_switch_wrapper mqc_regex_mode" data-target="mqc_renamesamples">Regex mode <span class="mqc_switch re_mode off">off</span></span>
+          <button class="btn btn-sm btn-link" data-toggle="modal" data-target="#regex_help_modal">help</button>
+          <button class="btn btn-default btn-xs mqc_toolbox_clear"><span class="glyphicon glyphicon-trash"></span> Clear</button>
+        </p>
+        <ul id="mqc_renamesamples_filters" class="mqc_filters"></ul>
+      </div>
+
+      <!-- Hiding -->
+      <div id="mqc_hidesamples" class="mqc_filter_section">
+        <h4>
+          <button id="mqc_hide_apply" class="btn btn-xs btn-default pull-right" disabled>Apply</button>
+          Show / Hide Samples
+        </h4>
+        {% if report.num_mpl_plots > 0 %}
+        <p>
+          <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+          This report has flat image plots that won't be hidden.<br/>
+          See the <a href="http://multiqc.info/docs/#flat--interactive-plots" target="_blank">documentation</a>
+          for help.
+        </p>
+        {% endif %}
+        <form id="mqc_hidesamples_form">
+          <div class="radio input-sm">
+            <label><input type="radio" name="mqc_hidesamples_showhide" class="mqc_hidesamples_showhide" value="hide" checked> Hide matching samples</label>
+          </div>
+          <div class="radio input-sm">
+            <label><input type="radio" name="mqc_hidesamples_showhide" class="mqc_hidesamples_showhide" value="show"> Show only matching samples</label>
+          </div>
+          <div class="form-inline">
+            <input id="mqc_hidesamples_filter" type="text" placeholder="Custom Pattern" class="form-control input-sm">
+            <button type="submit" id="mqc_hidesamples_filter_update" class="btn btn-default btn-sm">+</button>
+          </div>
+        </form>
+        {% if report.general_stats_data | length > 10 %}<p>Warning! This can take a few seconds.</p>{% endif %}
+        <p class="mqc_regex_mode_p">
+          <span class="mqc_switch_wrapper mqc_regex_mode" data-target="mqc_hidesamples">Regex mode <span class="mqc_switch re_mode off">off</span></span>
+          <button class="btn btn-sm btn-link" data-toggle="modal" data-target="#regex_help_modal">help</button>
+          <button class="btn btn-default btn-xs mqc_toolbox_clear"><span class="glyphicon glyphicon-trash"></span> Clear</button>
+        </p>
+        <ul id="mqc_hidesamples_filters" class="mqc_filters"></ul>
+      </div>
+
+      <!-- Export Plots -->
+      <div id="mqc_exportplots" class="mqc_filter_section">
+        <h4>Export Plots</h4>
+        <form>
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="active"><a href="#mqc_image_download" data-toggle="tab">Images</a></li>
+            <li><a href="#mqc_data_download" data-toggle="tab">Data</a></li>
+          </ul>
+          <div class="tab-content">
+            <div role="tabpanel" class="tab-pane fade in active" id="mqc_image_download">
+              <div class="row">
+                <div class="form-group col-sm-6">
+                  <div class="input-group input-group-sm">
+                    <input type="text" class="form-control input-sm" id="mqc_exp_width" placeholder="Width" value="1200">
+                    <span class="input-group-addon">px</span>
+                  </div>
+                </div>
+                <div class="form-group col-sm-6">
+                  <div class="input-group input-group-sm">
+                    <input type="text" class="form-control input-sm" id="mqc_exp_height" placeholder="Height" value="800">
+                    <span class="input-group-addon">px</span>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="form-group col-sm-6 checkbox">
+                  <label><input type="checkbox" id="mqc_export_aspratio" checked> Aspect ratio</label>
+                </div>
+                <div class="form-group col-sm-6">
+                  <select id="mqc_export_ft" class="form-control input-sm">
+                    <option value="image/png">PNG</option>
+                    <option value="image/jpeg">JPEG</option>
+                    <option value="image/svg+xml">SVG</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-sm-6 checkbox">
+                  <label for="mqc_export_scaling">Plot scaling</label>
+                </div>
+                <div class="col-sm-6">
+                  <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" id="mqc_export_scaling" placeholder="Scale" value="2">
+                    <span class="input-group-addon">X</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div role="tabpanel" class="tab-pane fade" id="mqc_data_download">
+              <p>Download the raw data used to create the plots in this report below:</p>
+              <div class="row">
+                <div class="form-group col-sm-4 checkbox">
+                  <label>Format:</label>
+                </div>
+                <div class="form-group col-sm-8">
+                  <select id="mqc_export_data_ft" class="form-control input-sm">
+                    <option value="tsv">Tab-separated</option>
+                    <option value="csv">Comma-separated</option>
+                    <option value="json">JSON</option>
+                  </select>
+                </div>
+              </div>
+              {% if config.make_data_dir %}
+              <p>Note that additional data was saved in <code>{{ config.data_dir_name }}</code> when this report was generated.</p>
+              {% endif %}
+              <div id="mqc_export_data_log"></div>
+            </div>
+          </div>
+
+          <hr>
+          <h5>Choose Plots</h5>
+          <button class="btn btn-sm btn-default" id="mqc_export_sall"><span class="glyphicon glyphicon-check"></span> All</button>
+          <button class="btn btn-sm btn-default" id="mqc_export_snone"><span class="glyphicon glyphicon-unchecked"></span> None</button>
+          <div id="mqc_export_selectplots"></div>
+
+          <hr>
+          <button type="submit" class="btn btn-block btn-default" id="mqc-dl-plot-btn">
+            <span class="glyphicon glyphicon-download-alt"></span> &nbsp; Download Plot <span id="mqc-dl-plot-txt">Images</span>
+          </button>
+          <p><small>If you use plots from MultiQC in a publication or presentation, please cite:</small></p>
+          <blockquote>
+            <strong>MultiQC: Summarize analysis results for multiple tools and samples in a single report</strong><br>
+            <em>Philip Ewels, M&aring;ns Magnusson, Sverker Lundin and Max K&auml;ller</em><br>
+            Bioinformatics (2016)<br>
+            doi: <a href="http://dx.doi.org/10.1093/bioinformatics/btw354" target="_blank">10.1093/bioinformatics/btw354</a><br>
+            PMID: <a href="http://www.ncbi.nlm.nih.gov/pubmed/27312411" target="_blank">27312411</a>
+          </blockquote>
+        </form>
+      </div>
+
+      <!-- Save Config -->
+      <div id="mqc_saveconfig" class="mqc_filter_section">
+        <h4>Save Settings</h4>
+        <p>You can save the toolbox settings for this report to the browser.</p>
+        <form class="form-inline" id="mqc_saveconfig_form">
+          <input type="text" class="form-control input-sm" placeholder="Config Name">
+          <button type="submit" class="btn btn-sm btn-default"><span class="glyphicon glyphicon-floppy-disk"></span> Save</button>
+        </form>
+        <hr>
+
+        <h4>Load Settings</h4>
+        <p>Choose a saved report profile from the dropdown box below:</p>
+        <form id="mqc_loadconfig_form">
+          <div class="form-group">
+            <select class="form-control input-sm">
+              <option value="">[ select ]</option>
+            </select>
+          </div>
+          <div class="form-group actions">
+            <button type="submit" class="btn btn-sm btn-default"><span class="glyphicon glyphicon-floppy-open"></span> Load</button>
+            <button class="mqc_config_clear btn btn-sm btn-default"><span class="glyphicon glyphicon-trash"></span> Delete</button>
+            <button class="mqc_config_set_default btn btn-sm btn-default"><span class="glyphicon glyphicon-floppy-saved"></span> Set default</button>
+            <button class="mqc_config_clear_default btn btn-sm btn-default"><span class="glyphicon glyphicon-floppy-remove"></span> Clear default</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tool citations -->
+      <div id="mqc_citations" class="mqc_filter_section">
+        <h4>Tool Citations</h4>
+        <p>Please remember to cite the tools that you use in your analysis.</p>
+        <p>To help with this, you can download publication details of the tools mentioned in this report:</p>
+        <p><button class="btn btn-sm btn-default download-citations-btn" data-format="doi"><span class="glyphicon glyphicon-barcode"></span> List of DOIs</button></p>
+        <p><button class="btn btn-sm btn-default download-citations-btn" data-format="bibtex"><span class="glyphicon glyphicon-bold"></span> BibTeX file</button></p>
+      </div>
+
+      <!-- Help / About -->
+      <div id="mqc_about" class="mqc_filter_section">
+        <h4>About MultiQC</h4>
+        <p>This report was generated using MultiQC, version {{ config.version }}</p>
+        <p>You can see a YouTube video describing how to use MultiQC reports here:
+          <a href="https://youtu.be/qPbIlO_KWN0?list=PLIA2-lqNuhvFGAsB92N0v7Qi5xCxCNsYM" target="_blank">https://youtu.be/qPbIlO_KWN0</a></p>
+        <p>For more information about MultiQC, including other videos and
+          extensive documentation, please visit <a href="http://multiqc.info/?ref=mqc_report" target="_blank">http://multiqc.info</a></p>
+        <p>You can report bugs, suggest improvements and find the source code for MultiQC on GitHub:
+          <a href="https://github.com/ewels/MultiQC" target="_blank">https://github.com/ewels/MultiQC</a></p>
+        <p>MultiQC is published in Bioinformatics:</p>
+        <blockquote>
+          <strong>MultiQC: Summarize analysis results for multiple tools and samples in a single report</strong><br>
+          <em>Philip Ewels, M&aring;ns Magnusson, Sverker Lundin and Max K&auml;ller</em><br>
+          Bioinformatics (2016)<br>
+          doi: <a href="http://dx.doi.org/10.1093/bioinformatics/btw354" target="_blank">10.1093/bioinformatics/btw354</a><br>
+          PMID: <a href="http://www.ncbi.nlm.nih.gov/pubmed/27312411" target="_blank">27312411</a>
+        </blockquote>
+      </div>
+
+    </div>
+    <a href="#top" class="mqc-toplink hidden-xs" title="Go to top"><span class="glyphicon glyphicon-chevron-up"></span></a>
+  </div>
+
+  <!-- header html -->
+  <h1 id="page_title">
+    {% if config.custom_logo is not none %}
+      <div class="pull-right">
+      {{ '<a href="'+config.custom_logo_url+'" target="_blank">' if config.custom_logo_url is not none }}
+        <img src="data:image/png;base64,{{ include_file(config.custom_logo, b64=True) }}" title="{{ config.custom_logo_title if config.custom_logo_title is not none }}" class="custom_logo">
+      {{ '</a>' if config.custom_logo_url is not none }}
+      </div>
+    {% endif %}
+    <a href="http://multiqc.info" target="_blank">
+        <img src="data:image/png;base64,{{ include_file('assets/img/MultiQC_logo.png', b64=True) }}" title="MultiQC" class="multiqc_logo">
+    </a>
+</h1>
+{% if config.title is not none or config.subtitle is not none %}
+<h1>
+  {{ config.title if config.title is not none }}
+  {{ '<br>' if config.title is not none and config.subtitle is not none }}
+  {{ '<small>'+config.subtitle+'</small>' if config.subtitle is not none }}
+</h1>
+{% endif %}
+
+{% if config.intro_text != False %}
+<p class="lead">
+  {{ config.intro_text if config.intro_text is not none else 'A modular tool to aggregate results from bioinformatics analyses across many samples into a single report.' }}
+</p>
+{% endif %}
+
+{% if config.report_comment and config.report_comment | length > 0 %}
+<blockquote class="report_comment">{{ config.report_comment }}</blockquote>
+{% endif %}
+
+{% if config.report_header_info and config.report_header_info | length > 0 %}
+<div class="well">
+  <dl class="dl-horizontal" style="margin-bottom:0;">
+    {% for d in config.report_header_info %}{% for k, v in d.items() %}
+      <dt>{{ k }}</dt><dd>{{ v }}</dd>
+    {% endfor %}{% endfor %}
+  </dl>
+</div>
+{% endif %}
+
+<noscript>
+  <div class="alert alert-danger">
+    <h4>JavaScript Disabled</h4>
+    <p>MultiQC reports use JavaScript for plots and toolbox functions. It looks like
+    you have JavaScript disabled in your web browser. Please note that many of the report
+    functions will not work as intended.</p>
+  </div>
+</noscript>
+
+<div class="alert alert-warning mqc_loading_warning" style="display:none;"><span class="glyphicon glyphicon-time"></span> &nbsp;Loading report..</div>
+
+{% if config.show_analysis_time or config.show_analysis_paths %}
+<div id="analysis_dirs_wrapper">
+  <p>Report
+  {% if config.show_analysis_time %}
+    generated on {{ config.creation_date }}
+  {% endif %}
+  {% if config.show_analysis_paths %}
+    based on data in:
+    {% if config.analysis_dir | length == 1 %}
+      <code class="mqc_analysis_path">{{ config.analysis_dir[0] }}</code></p>
+    {% else %}
+      </p>
+      <ul>
+        {% for d in config.analysis_dir %}
+        <li><code class="mqc_analysis_path">{{ d }}</code></li>
+        {%  endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+</div>
+{% endif %}
+
+{% if config.sample_names_rename_buttons | length > 0 %}
+<p id="mqc_sname_switches_txt">Change sample names:
+  <span class="btn-group btn-group-sm" role="group" id="mqc_sname_switches">
+    {% for sn_t in config.sample_names_rename_buttons %}
+      <button type="button" class="btn btn-primary mqc_sname_switches {% if loop.index == 1 %}active{% endif %}" data-index="{{ loop.index - 1 }}">{{ sn_t }}</button>
+    {%- endfor %}
+  </span>
+</p>
+{% endif %}
+
+
+{% if config.show_hide_buttons | length > 0 %}
+<p id="mqc_hide_switches_txt">Show/Hide samples:
+  <span class="btn-group btn-group-sm" role="group" id="mqc_hide_switches">
+    {% for sn_t in config.show_hide_buttons %}
+      <button type="button" class="btn btn-primary mqc_hide_switches {% if loop.index == 1 %}active{% endif %}" data-index="{{ loop.index - 1 }}">{{ sn_t }}</button>
+    {%- endfor %}
+  </span>
+</p>
+{% endif %}
+
+<hr id="mqc_header_hr">
+
+<div class="alert alert-info alert-dismissible hidden-print" id="mqc_welcome" style="display: none;">
+  <button type="button" data-dismiss="alert" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+  <button type="button" data-dismiss="alert" class="btn-link btn-sm" id="mqc_hide_welcome_btn">don't show again</button>
+  <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+  <strong>Welcome!</strong> Not sure where to start? &nbsp;
+  <a href="https://www.youtube.com/watch?v=qPbIlO_KWN0" target="_blank" class="btn btn-info btn-sm">Watch a tutorial video</a>
+  &nbsp; <small><em>(6:06)</em></small>
+</div>
+
+{% if report.num_hc_plots > 0 and report.general_stats_data | length > config.num_datasets_plot_limit %}
+<div id="mqc-warning-many-samples" class="alert alert-warning alert-dismissible hidden-print">
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+  <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>
+  Because this report contains a lot of samples, you may need to click 'Show plot' to see some graphs.
+  <button id="mqc-render-all-plots" class="btn btn-default btn-sm">Render all plots</button>
+</div>
+
+
+</body>
+</html>

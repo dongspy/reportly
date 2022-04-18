@@ -1,0 +1,87 @@
+{# #######################
+  header.html
+##########################
+
+This block gives the introduction content at the top of each report.
+That is, the page title, welcome message, details of where the report
+was generated and the button that launches the welcome tour.
+
+#}
+
+<h1 id="page_title">
+    {% if config.custom_logo is not none %}
+      <div class="pull-right">
+      {{ '<a href="'+config.custom_logo_url+'" target="_blank">' if config.custom_logo_url is not none }}
+        <img src="data:image/png;base64,{{ include_file(config.custom_logo, b64=True) }}" title="{{ config.custom_logo_title if config.custom_logo_title is not none }}" class="custom_logo">
+      {{ '</a>' if config.custom_logo_url is not none }}
+      </div>
+    {% endif %}
+    <a href="#" target="_blank">
+        <img src="data:image/png;base64,{{ include_file('assets/img/reportly2.png', b64=True) }}" title="reportly" class="multiqc_logo">
+    </a>
+</h1>
+{% if report.title is not none or report.subtitle is not none %}
+<h1>
+  {{ report.title if report.title is not none }}
+  {{ '<br>' if report.title is not none and report.subtitle is not none }}
+  {{ '<small>'+report.subtitle+'</small>' if report.subtitle is not none }}
+</h1>
+{% endif %}
+
+{% if report.intro_text != False %}
+<p class="lead">
+  {{ report.intro_text if report.intro_text is not none }}
+</p>
+{% endif %}
+
+{% if report.report_comment and report.report_comment | length > 0 %}
+<blockquote class="report_comment">{{ report.report_comment }}</blockquote>
+{% endif %}
+
+{% if report.report_header_info and report.report_header_info | length > 0 %}
+<div class="well">
+  <dl class="dl-horizontal" style="margin-bottom:0;">
+    {% for d in report.report_header_info %}{% for k, v in d.items() %}
+      <dt>{{ k }}</dt><dd>{{ v }}</dd>
+    {% endfor %}{% endfor %}
+  </dl>
+</div>
+{% endif %}
+
+<noscript>
+  <div class="alert alert-danger">
+    <h4>JavaScript Disabled</h4>
+    <p>Reportly use JavaScript for plots and toolbox functions. It looks like
+    you have JavaScript disabled in your web browser. Please note that many of the report
+    functions will not work as intended.</p>
+  </div>
+</noscript>
+
+
+{% if report.show_analysis_time or report.show_analysis_paths %}
+<div id="analysis_dirs_wrapper">
+  <p>Report
+  {% if report.show_analysis_time %}
+    generated on {{ report.creation_date }}
+  {% endif %}
+  {% if report.show_analysis_paths %}
+    based on data in:
+    {% if report.analysis_dir | length == 1 %}
+      <code class="mqc_analysis_path">{{ report.analysis_dir[0] }}</code></p>
+    {% else %}
+      </p>
+      <ul>
+        {% for d in report.analysis_dir %}
+        <li><code class="mqc_analysis_path">{{ d }}</code></li>
+        {%  endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+</div>
+{% endif %}
+
+
+
+
+
+<hr id="mqc_header_hr">

@@ -1,0 +1,19 @@
+
+
+{% for table_id, data in report.table_data.items() %}
+
+{{table_id}}
+
+<div id="{{table_id}}"></div>
+
+
+<script type="text/javascript">
+
+    $(function () {
+
+        var var_{{table_id}} = new Tabulator("#{{table_id}}", {{data|tojson}});
+
+    })
+</script>
+
+{% endfor %}
