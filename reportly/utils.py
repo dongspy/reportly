@@ -5,12 +5,15 @@ reportly utils
 import base64
 import io
 import os
+import pathlib
 
 __author__ = "dongspy"
 __email__ = "lipidong@126.com"
 
 
-def include_file(name, fdir="./", b64=False):
+def include_file(
+    name, fdir=os.path.join(pathlib.Path(__file__).parents[1], "template"), b64=False
+):
     """convert the file, especially the image file, to data:image/png;base64.
     Mainly used in the jinja template
 

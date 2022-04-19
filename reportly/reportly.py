@@ -4,7 +4,7 @@ import pathlib
 
 import jinja2
 
-from .element import Table
+from .elements import Table
 from .utils import include_file
 
 
@@ -49,6 +49,7 @@ class Report:
         config,
         template_dir=os.path.join(pathlib.Path(__file__).parents[1], "template"),
     ):
+        self.table_script = Table.to_datatable_script()
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
         env.globals["include_file"] = include_file
         j_template = env.get_template("base.html")
@@ -59,7 +60,7 @@ class Report:
             f.write(report_output)
 
 
-class Config:
+class Configure:
     def __init__(self):
         self.custom_logo_url = None
         self.custom_logo = None
